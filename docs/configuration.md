@@ -44,14 +44,30 @@ Simple string steps that control flow:
 - clear    # clear the terminal screen
 ```
 
+A timed pause can be specified in milliseconds. It prints the next prompt,
+then waits there before the following step begins:
+
+```yaml
+- pause: 2000
+- comment: "This starts typing after two seconds."
+```
+
+Bare `- pause` retains its existing behavior: it waits for Enter at the prompt
+(or uses `auto_advance` when configured).
+
 ### Comment
 
-Styled text that appears without a prompt:
+Styled narration typed at the shell prompt:
 
 ```yaml
 - comment: "Explanatory text here"
   style: dim           # optional: dim, bold, italic, or a color name
+  speed: 30            # optional timing override; also supports delay/jitter/pause
 ```
+
+Comments use the global typewriter timing by default. The `speed`, `delay`,
+`jitter`, and `pause` fields can be overridden per comment, with the same
+semantics as command steps.
 
 ## Per-step command options
 

@@ -65,6 +65,7 @@ enum Step {
     Input(InputStep),
     Command(CommandStep),
     Comment(CommentStep),
+    TimedPause(TimedPauseStep),
 }
 
 #[derive(Deserialize)]
@@ -82,10 +83,23 @@ struct InputStep {
 }
 
 #[derive(Deserialize)]
+struct TimedPauseStep {
+    pause: u64,
+}
+
+#[derive(Deserialize)]
 struct CommentStep {
     comment: String,
     #[serde(default)]
     style: Option<String>,
+    #[serde(default)]
+    speed: Option<u64>,
+    #[serde(default)]
+    delay: Option<u64>,
+    #[serde(default)]
+    jitter: Option<u64>,
+    #[serde(default)]
+    pause: Option<u64>,
 }
 
 #[derive(Deserialize)]
@@ -372,10 +386,18 @@ fn speed_to_delay(speed: u64) -> u64 {
 }
 
 fn resolve_delay(cmd: &CommandStep, config: &Config) -> u64 {
-    if let Some(speed) = cmd.speed.or(config.speed) {
+    resolve_text_delay(cmd.speed, cmd.delay, config)
+}
+
+fn resolve_comment_delay(comment: &CommentStep, config: &Config) -> u64 {
+    resolve_text_delay(comment.speed, comment.delay, config)
+}
+
+fn resolve_text_delay(speed: Option<u64>, delay: Option<u64>, config: &Config) -> u64 {
+    if let Some(speed) = speed.or(config.speed) {
         speed_to_delay(speed)
     } else {
-        cmd.delay.unwrap_or(config.delay)
+        delay.unwrap_or(config.delay)
     }
 }
 
@@ -1167,9 +1189,17 @@ fn style_to_ansi(style: Option<&str>) -> &str {
     }
 }
 
-fn print_comment(comment: &CommentStep) {
+fn print_comment(comment: &CommentStep, config: &Config) {
     let ansi = style_to_ansi(comment.style.as_deref());
-    println!("{}{}\x1B[0m", ansi, comment.comment);
+    print!("{}", ansi);
+    io::stdout().flush().unwrap();
+    type_text(
+        &comment.comment,
+        resolve_comment_delay(comment, config),
+        comment.jitter.unwrap_or(config.jitter),
+        comment.pause.unwrap_or(config.pause),
+    );
+    println!("\x1B[0m");
 }
 
 fn print_chapter_header(name: &str) {
@@ -1224,10 +1254,20 @@ struct ResolvedStep {
 
 enum StepRef {
     Directive(String),
-    Comment(String, Option<String>),
+    TimedPause(u64),
+    Comment(CommentRef),
     Ask(String, String),                   // (message, capture_name)
     Input(String, String, Option<String>), // (message, capture_name, default)
     Command(CommandRef),
+}
+
+struct CommentRef {
+    comment: String,
+    style: Option<String>,
+    speed: Option<u64>,
+    delay: Option<u64>,
+    jitter: Option<u64>,
+    pause: Option<u64>,
 }
 
 struct CommandRef {
@@ -1274,8 +1314,18 @@ fn resolve_step(step: &Step) -> ResolvedStep {
         Step::Input(i) => ResolvedStep {
             step: StepRef::Input(i.input.clone(), i.capture.clone(), i.default.clone()),
         },
+        Step::TimedPause(p) => ResolvedStep {
+            step: StepRef::TimedPause(p.pause),
+        },
         Step::Comment(c) => ResolvedStep {
-            step: StepRef::Comment(c.comment.clone(), c.style.clone()),
+            step: StepRef::Comment(CommentRef {
+                comment: c.comment.clone(),
+                style: c.style.clone(),
+                speed: c.speed,
+                delay: c.delay,
+                jitter: c.jitter,
+                pause: c.pause,
+            }),
         },
         Step::Command(cmd) => ResolvedStep {
             step: StepRef::Command(CommandRef {
@@ -1368,6 +1418,9 @@ fn print_dry_run(config: &Config) {
             StepRef::Directive(d) => {
                 println!("\x1B[2m[{}]\x1B[0m", d);
             }
+            StepRef::TimedPause(ms) => {
+                println!("\x1B[2m[pause: {}ms]\x1B[0m", ms);
+            }
             StepRef::Ask(msg, capture) => {
                 println!("\x1B[33m[ask]\x1B[0m {} \x1B[2m→ {}\x1B[0m", msg, capture);
             }
@@ -1381,9 +1434,9 @@ fn print_dry_run(config: &Config) {
                     msg, capture, default_hint
                 );
             }
-            StepRef::Comment(text, style) => {
-                let ansi = style_to_ansi(style.as_deref());
-                println!("{}{}\x1B[0m", ansi, text);
+            StepRef::Comment(comment) => {
+                let ansi = style_to_ansi(comment.style.as_deref());
+                println!("{}{}{}\x1B[0m", prompt, ansi, comment.comment);
             }
             StepRef::Command(cmd) => {
                 print!("{}{}", prompt, cmd.text);
@@ -1533,6 +1586,15 @@ fn run_demo(config: &Config, cli: &Cli) {
                 }
             },
 
+            StepRef::TimedPause(ms) => {
+                if !prompt_shown {
+                    print!("{}", prompt);
+                    io::stdout().flush().unwrap();
+                }
+                prompt_shown = true;
+                thread::sleep(Duration::from_millis(*ms));
+            }
+
             StepRef::Ask(msg, capture_name) => {
                 print!("\x1B[33m?\x1B[0m {} \x1B[2m[y/N]\x1B[0m ", msg);
                 io::stdout().flush().unwrap();
@@ -1573,12 +1635,21 @@ fn run_demo(config: &Config, cli: &Cli) {
                 continue;
             }
 
-            StepRef::Comment(text, style) => {
+            StepRef::Comment(comment) => {
+                if !prompt_shown {
+                    print!("{}", prompt);
+                    io::stdout().flush().unwrap();
+                }
+                prompt_shown = false;
                 let comment = CommentStep {
-                    comment: text.clone(),
-                    style: style.clone(),
+                    comment: comment.comment.clone(),
+                    style: comment.style.clone(),
+                    speed: comment.speed,
+                    delay: comment.delay,
+                    jitter: comment.jitter,
+                    pause: comment.pause,
                 };
-                print_comment(&comment);
+                print_comment(&comment, config);
             }
 
             StepRef::Command(cmd) => {
@@ -2119,6 +2190,25 @@ steps:
     }
 
     #[test]
+    fn test_timed_pause_step() {
+        let yaml = r#"
+steps:
+  - pause: 20
+  - comment: "Narration"
+"#;
+        let config: Config = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(config.steps.len(), 2);
+        match &config.steps[0] {
+            Step::TimedPause(p) => assert_eq!(p.pause, 20),
+            _ => panic!("expected TimedPause step"),
+        }
+        match &config.steps[1] {
+            Step::Comment(c) => assert_eq!(c.comment, "Narration"),
+            _ => panic!("expected Comment step"),
+        }
+    }
+
+    #[test]
     fn test_clear_directive() {
         let yaml = r#"
 steps:
@@ -2215,6 +2305,10 @@ steps:
 steps:
   - comment: "This is a narration"
     style: dim
+    speed: 25
+    delay: 30
+    jitter: 15
+    pause: 100
   - text: "echo hello"
 "#;
         let config: Config = serde_yaml::from_str(yaml).unwrap();
@@ -2223,6 +2317,10 @@ steps:
             Step::Comment(c) => {
                 assert_eq!(c.comment, "This is a narration");
                 assert_eq!(c.style.as_deref(), Some("dim"));
+                assert_eq!(c.speed, Some(25));
+                assert_eq!(c.delay, Some(30));
+                assert_eq!(c.jitter, Some(15));
+                assert_eq!(c.pause, Some(100));
             }
             _ => panic!("expected Comment step"),
         }
@@ -2239,8 +2337,42 @@ steps:
             Step::Comment(c) => {
                 assert_eq!(c.comment, "Just a note");
                 assert!(c.style.is_none());
+                assert!(c.speed.is_none());
+                assert!(c.delay.is_none());
+                assert!(c.jitter.is_none());
+                assert!(c.pause.is_none());
             }
             _ => panic!("expected Comment step"),
+        }
+    }
+
+    #[test]
+    fn test_comment_timing_resolves_correctly() {
+        let yaml = r#"
+speed: 20
+delay: 80
+jitter: 30
+pause: 300
+steps:
+  - comment: "global timing"
+  - comment: "custom timing"
+    speed: 40
+    delay: 10
+    jitter: 5
+    pause: 50
+"#;
+        let config: Config = serde_yaml::from_str(yaml).unwrap();
+        match (&config.steps[0], &config.steps[1]) {
+            (Step::Comment(c0), Step::Comment(c1)) => {
+                assert_eq!(resolve_comment_delay(c0, &config), 50);
+                assert_eq!(c0.jitter.unwrap_or(config.jitter), 30);
+                assert_eq!(c0.pause.unwrap_or(config.pause), 300);
+
+                assert_eq!(resolve_comment_delay(c1, &config), 25);
+                assert_eq!(c1.jitter.unwrap_or(config.jitter), 5);
+                assert_eq!(c1.pause.unwrap_or(config.pause), 50);
+            }
+            _ => panic!("expected Comment steps"),
         }
     }
 

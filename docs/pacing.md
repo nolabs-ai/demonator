@@ -84,6 +84,16 @@ Use `pause` when you need a mid-demo break that isn't tied to a specific
 command. Use `wait_before` / `wait_after` when you want the pause anchored to a
 particular step.
 
+For a fixed delay at the next prompt, give `pause` a duration in milliseconds.
+The prompt is printed before the timer starts, and the following step reuses it:
+
+```yaml
+steps:
+  - comment: "The next section starts shortly."
+  - pause: 2000
+  - comment: "Here we go."
+```
+
 ## Dry-run display
 
 In `--dry-run` mode, steps with these flags show the appropriate annotation:

@@ -73,8 +73,8 @@ agg demo.cast demo.gif
 ## Tips
 
 - Use `wait: 0` on a step to advance immediately (no pause at all)
-- Comments appear instantly, so add a `wait` on the following command to give
-  readers time to read the comment
+- Comments use the configured typewriter timing; add a `wait` on the following
+  command if readers need more time after a comment has finished typing
 - The `pause` directive respects `auto_advance` — it waits the global delay
   instead of waiting for Enter
 - Chapter navigation is not available in auto-advance mode (there's no Enter
