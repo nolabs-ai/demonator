@@ -1,6 +1,6 @@
 [package]
 name = "demonator"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "Typewriter-style text display for terminal demos"
 license = "Apache-2.0"
