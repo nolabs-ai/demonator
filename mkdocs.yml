@@ -1,8 +1,8 @@
 site_name: demonator
 site_description: Typewriter-style text display for terminal demos
-site_url: https://lukehinds.github.io/demonator
-repo_url: https://github.com/lukehinds/demonator
-repo_name: lukehinds/demonator
+site_url: https://nolabs-ai.github.io/demonator
+repo_url: https://github.com/nolabs-ai/demonator
+repo_name: nolabs-ai/demonator
 edit_uri: edit/main/docs/
 
 theme:
@@ -81,4 +81,4 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/lukehinds/demonator
+      link: https://github.com/nolabs-ai/demonator

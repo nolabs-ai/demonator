@@ -5,7 +5,7 @@ file of commands and "types" them out character-by-character with realistic
 timing, then executes each command when you press Enter — so live terminal demos
 look natural and polished.
 
-📖 **Full documentation: [lukehinds.github.io/demonator](https://lukehinds.github.io/demonator)**
+📖 **Full documentation: [nolabs-ai.github.io/demonator](https://nolabs-ai.github.io/demonator)**
 
 ## Install
 
@@ -61,20 +61,20 @@ demonator
 
 | Feature | Description |
 |---------|-------------|
-| [Commentary](https://lukehinds.github.io/demonator/commentary/) | Styled narration text between commands |
-| [Fake output](https://lukehinds.github.io/demonator/fake-output/) | Pre-defined command output for offline demos |
-| [Syntax highlighting](https://lukehinds.github.io/demonator/syntax-highlighting/) | Colorize commands as they are typed |
-| [Chapters](https://lukehinds.github.io/demonator/chapters/) | Named sections with keyboard navigation |
-| [Auto-advance](https://lukehinds.github.io/demonator/auto-advance/) | Hands-free mode for recording with asciinema |
-| [Wait-for-pattern](https://lukehinds.github.io/demonator/wait-for-pattern/) | Pause until regex matches in output |
-| [Setup & teardown](https://lukehinds.github.io/demonator/setup-teardown/) | Hidden environment prep and cleanup |
-| [Environment variables](https://lukehinds.github.io/demonator/environment/) | Global and per-step `env:` for commands |
-| [Interactive commands](https://lukehinds.github.io/demonator/interactive/) | Expect-style responses to prompts |
-| [User prompts](https://lukehinds.github.io/demonator/user-prompts/) | Collect yes/no or free-text input from the presenter |
-| [Conditional steps](https://lukehinds.github.io/demonator/conditionals/) | Branch based on captured variables |
-| [Capturing output](https://lukehinds.github.io/demonator/configuration/) | Extract values with regex and reuse them in later steps |
+| [Commentary](https://nolabs-ai.github.io/demonator/commentary/) | Styled narration text between commands |
+| [Fake output](https://nolabs-ai.github.io/demonator/fake-output/) | Pre-defined command output for offline demos |
+| [Syntax highlighting](https://nolabs-ai.github.io/demonator/syntax-highlighting/) | Colorize commands as they are typed |
+| [Chapters](https://nolabs-ai.github.io/demonator/chapters/) | Named sections with keyboard navigation |
+| [Auto-advance](https://nolabs-ai.github.io/demonator/auto-advance/) | Hands-free mode for recording with asciinema |
+| [Wait-for-pattern](https://nolabs-ai.github.io/demonator/wait-for-pattern/) | Pause until regex matches in output |
+| [Setup & teardown](https://nolabs-ai.github.io/demonator/setup-teardown/) | Hidden environment prep and cleanup |
+| [Environment variables](https://nolabs-ai.github.io/demonator/environment/) | Global and per-step `env:` for commands |
+| [Interactive commands](https://nolabs-ai.github.io/demonator/interactive/) | Expect-style responses to prompts |
+| [User prompts](https://nolabs-ai.github.io/demonator/user-prompts/) | Collect yes/no or free-text input from the presenter |
+| [Conditional steps](https://nolabs-ai.github.io/demonator/conditionals/) | Branch based on captured variables |
+| [Capturing output](https://nolabs-ai.github.io/demonator/configuration/) | Extract values with regex and reuse them in later steps |
 
-See the [configuration reference](https://lukehinds.github.io/demonator/configuration/)
+See the [configuration reference](https://nolabs-ai.github.io/demonator/configuration/)
 for all global options, per-step overrides, and CLI flags.
 
 ## License
