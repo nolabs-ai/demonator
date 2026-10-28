@@ -72,4 +72,6 @@ teardown:
 - Redirect stderr in setup commands to suppress expected warnings:
   `"docker stop foo 2>/dev/null"`
 - Teardown runs even if the demo is interrupted partway through (as long as
-  demonator exits normally — Ctrl+C will skip teardown)
+  demonator exits normally — Ctrl+C between commands will skip teardown).
+  On macOS and Linux, Ctrl+C during a command interrupts that command and lets
+  the demo continue, including its teardown.

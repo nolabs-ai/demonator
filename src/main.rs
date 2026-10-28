@@ -727,6 +727,62 @@ fn parse_json_path_segments(path: &str) -> Vec<JsonSegment> {
 // Command execution
 // ---------------------------------------------------------------------------
 
+// The terminal sends Ctrl+C to the whole foreground process group. Catch it
+// while waiting for a command so only the child stops. Unlike SIG_IGN, a caught
+// handler is reset to SIG_DFL by exec, so the child still receives SIGINT.
+#[cfg(unix)]
+struct CommandInterruptGuard {
+    previous: libc::sigaction,
+    _lock: std::sync::MutexGuard<'static, ()>,
+}
+
+#[cfg(unix)]
+impl CommandInterruptGuard {
+    fn new() -> io::Result<Self> {
+        static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let lock = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        extern "C" fn handle_interrupt(_: libc::c_int) {}
+
+        // SAFETY: Both actions are initialized, sigemptyset initializes the mask,
+        // and the handler does no work. The lock serializes action replacement.
+        unsafe {
+            let mut action: libc::sigaction = std::mem::zeroed();
+            let mut previous: libc::sigaction = std::mem::zeroed();
+            action.sa_sigaction = handle_interrupt as *const () as libc::sighandler_t;
+            action.sa_flags = libc::SA_RESTART;
+            libc::sigemptyset(&mut action.sa_mask);
+            if libc::sigaction(libc::SIGINT, &action, &mut previous) == -1 {
+                return Err(io::Error::last_os_error());
+            }
+            Ok(Self {
+                previous,
+                _lock: lock,
+            })
+        }
+    }
+}
+
+#[cfg(unix)]
+impl Drop for CommandInterruptGuard {
+    fn drop(&mut self) {
+        // SAFETY: previous was populated by sigaction and remains valid; the
+        // lock is held until after the original disposition has been restored.
+        unsafe {
+            libc::sigaction(libc::SIGINT, &self.previous, std::ptr::null_mut());
+        }
+    }
+}
+
+#[cfg(not(unix))]
+struct CommandInterruptGuard;
+
+#[cfg(not(unix))]
+impl CommandInterruptGuard {
+    fn new() -> io::Result<Self> {
+        Ok(Self)
+    }
+}
+
 fn initial_env(config_env: &HashMap<String, String>) -> HashMap<String, String> {
     let mut env: HashMap<String, String> = std::env::vars().collect();
     for (k, v) in config_env {
@@ -810,6 +866,7 @@ fn shell_status_with_env_snapshot(
     stdout: Stdio,
     stderr: Stdio,
 ) -> io::Result<(ExitStatus, Option<HashMap<String, String>>)> {
+    let _interrupt_guard = CommandInterruptGuard::new()?;
     let path = env_snapshot_path();
     let status = Command::new("sh")
         .arg("-c")
@@ -831,6 +888,7 @@ fn shell_output_with_env_snapshot(
     stdout: Stdio,
     stderr: Stdio,
 ) -> io::Result<(Output, Option<HashMap<String, String>>)> {
+    let _interrupt_guard = CommandInterruptGuard::new()?;
     let path = env_snapshot_path();
     let output = Command::new("sh")
         .arg("-c")
@@ -941,6 +999,13 @@ fn run_command_wait_for(
     env_state: &mut HashMap<String, String>,
     overlay: &HashMap<String, String>,
 ) -> i32 {
+    let _interrupt_guard = match CommandInterruptGuard::new() {
+        Ok(guard) => guard,
+        Err(e) => {
+            eprintln!("[demonator] failed to configure interrupt handling: {}", e);
+            return 1;
+        }
+    };
     let re = match Regex::new(pattern) {
         Ok(r) => r,
         Err(e) => {
@@ -1066,6 +1131,13 @@ fn run_command_interact(
     env_state: &mut HashMap<String, String>,
     overlay: &HashMap<String, String>,
 ) -> i32 {
+    let _interrupt_guard = match CommandInterruptGuard::new() {
+        Ok(guard) => guard,
+        Err(e) => {
+            eprintln!("[demonator] failed to configure interrupt handling: {}", e);
+            return 1;
+        }
+    };
     let before = env_state.clone();
     let env = merge_env(env_state, overlay);
     let path = env_snapshot_path();

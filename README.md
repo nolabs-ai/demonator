@@ -30,6 +30,10 @@ demonator --watch      # re-run demo when config file changes
 
 Press **Enter** after each step to run the command and advance to the next one.
 
+On macOS and Linux, press **Ctrl+C** while a command is running to interrupt it
+and continue the demo. Between commands (including while typing or waiting for
+Enter), **Ctrl+C** exits Demonator.
+
 ## Quick start
 
 Create `demo.yml`:
